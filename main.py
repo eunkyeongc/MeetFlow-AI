@@ -1,4 +1,11 @@
 from fastapi import FastAPI
+from sqlalchemy import text
+from database import engine
+
+import models
+from database import Base, engine
+
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="MeetFlow AI",
@@ -18,4 +25,16 @@ def root():
 def health_check():
     return {
         "status": "ok"
+    }
+
+
+@app.get("/db-test")
+def db_test():
+    with engine.connect() as connection:
+        result = connection.execute(text("SELECT current_database();"))
+        database_name = result.scalar()
+
+    return {
+        "database": database_name,
+        "status": "connected"
     }
