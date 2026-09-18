@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from sqlalchemy import text
-from database import engine
 
 import models
 from database import Base, engine
+from routers import users, auth, projects
 
 Base.metadata.create_all(bind=engine)
 
@@ -13,6 +13,9 @@ app = FastAPI(
     version="0.1.0"
 )
 
+app.include_router(users.router)
+app.include_router(auth.router)
+app.include_router(projects.router)
 
 @app.get("/")
 def root():

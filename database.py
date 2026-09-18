@@ -1,3 +1,7 @@
+# ==================================================================
+# C:\Users\Administrator\meetflow_ai\database.py
+# 
+# ==================================================================
 import os
 
 from dotenv import load_dotenv
@@ -18,3 +22,12 @@ SessionLocal = sessionmaker(
 )
 
 Base = declarative_base()
+
+
+def get_db():
+    db = SessionLocal()
+
+    try:
+        yield db
+    finally:
+        db.close()

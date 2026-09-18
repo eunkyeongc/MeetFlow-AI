@@ -26,10 +26,28 @@ class Project(Base):
     __tablename__ = "projects"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(100))
-    description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
 
+    name: Mapped[str] = mapped_column(
+        String(100)
+    )
+
+    description: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True
+    )
+
+    # 프로젝트를 생성한 사용자
+    owner_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id")
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.now
+    )
+
+    # Project → User 관계
+    owner: Mapped["User"] = relationship()
 
 class Meeting(Base):
     __tablename__ = "meetings"
