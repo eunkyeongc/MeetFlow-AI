@@ -21,6 +21,7 @@ class UserResponse(BaseModel):
     id: int
     name: str
     email: EmailStr
+    profile_image: str | None = None
 
     model_config = {"from_attributes": True}
 
