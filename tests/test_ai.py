@@ -20,12 +20,12 @@ def test_process_meeting_ai():
     }
 
     mock_response = MagicMock()
-    mock_response.text = json.dumps(mock_data, ensure_ascii=False)
+    mock_response.choices[0].message.content = json.dumps(mock_data, ensure_ascii=False)
 
     # 3. 실제 Gemini API 호출을 가짜 응답으로 대체
     with patch("services.ai_service._get_client") as mock_get_client:
         mock_client = MagicMock()
-        mock_client.models.generate_content.return_value = mock_response
+        mock_client.chat.completions.create.return_value = mock_response
         mock_get_client.return_value = mock_client
 
         result = analyze_meeting(
@@ -41,4 +41,4 @@ def test_process_meeting_ai():
     assert result.action_items == []
 
     # 5. Gemini 호출 함수가 정확히 한 번 실행되었는지 확인
-    mock_client.models.generate_content.assert_called_once()
+    mock_client.chat.completions.create.assert_called_once()
