@@ -102,16 +102,28 @@ PostgreSQL 데이터베이스
 
 ```text
 meetflow_ai/
-├── .github/workflows/ci.yml
+├── .github/
+│   └── workflows/
+│       └── ci.yml
+├── .dockerignore
+├── .env                 # 로컬 전용, GitHub 제출 제외
 ├── .env.example
+├── .gitignore
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt
+├── README.md
+├── TROUBLESHOOTING.md
+├── frequency_commands.md
 ├── main.py
 ├── database.py
 ├── models.py
+│
 ├── migrations/
+│   └── 001_add_users_profile_image.sql
+│
 ├── routers/
+│   ├── __init__.py
 │   ├── auth.py
 │   ├── meetings.py
 │   ├── profile.py
@@ -119,19 +131,47 @@ meetflow_ai/
 │   ├── tasks.py
 │   ├── users.py
 │   └── views.py
+│
 ├── schemas/
+│   ├── __init__.py
+│   ├── meeting.py
+│   ├── project.py
+│   ├── task.py
+│   └── user.py
+│
 ├── services/
+│   ├── __init__.py
 │   ├── ai_service.py
 │   ├── auth_service.py
 │   ├── calendar_service.py
 │   ├── password_service.py
 │   └── stt_service.py
+│
 ├── static/
+│   ├── css/
+│   │   └── style.css
+│   └── js/
+│       └── main.js
+│
 ├── templates/
+│   ├── base.html
+│   ├── calendar.html
+│   ├── dashboard.html
+│   ├── login.html
+│   ├── meeting_detail.html
+│   ├── meetings.html
+│   ├── new_meeting.html
+│   ├── new_task.html
+│   └── register.html
+│
 ├── tests/
+│   ├── __init__.py
 │   ├── test_ai.py
 │   └── test_meetings.py
-└── README.md
+│
+└── uploads/
+    ├── audio/
+    └── profile/
 ```
 
 ## 7. 설치 및 실행 방법
