@@ -68,6 +68,7 @@ app.include_router(projects.router)
 app.include_router(meetings.router)
 app.include_router(tasks.router)
 app.include_router(views.router)
+app.add_api_route("/login", views.login_view, methods=["GET"], include_in_schema=False)
 
 
 # ============================================================

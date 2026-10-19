@@ -22,3 +22,16 @@ data/
 # OS
 .DS_Store
 Thumbs.db
+# Database backups
+*.dump
+
+# Code backups
+*.bak
+*_before_*.py
+*_before_*.html
+*_backup*.py
+*_backup*.html
+
+# Server logs
+*.log
+*.before_*

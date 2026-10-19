@@ -4,20 +4,6 @@
 
 <!-- 상단 헤더 & 프로젝트 선택 -->
 <div class="d-flex justify-content-between align-items-center mb-3 mt-1">
-    <div class="dropdown">
-        <button class="btn btn-light btn-sm rounded-pill border px-3 dropdown-toggle text-dark fw-bold" type="button" data-bs-toggle="dropdown">
-            🟣 {{ current_project.name if current_project is defined and current_project else '전체 프로젝트' }}
-        </button>
-        <ul class="dropdown-menu">
-            {% if projects is defined and projects %}
-                {% for project in projects %}
-                <li><a class="dropdown-item {% if current_project and current_project.id == project.id %}active{% endif %}" href="?project_id={{ project.id }}">{{ project.name }}</a></li>
-                {% endfor %}
-            {% else %}
-                
-            {% endif %}
-        </ul>
-    </div>
     <button class="btn btn-link btn-sm text-muted text-decoration-none p-0" onclick="loadDashboard()">
         <i class="bi bi-arrow-repeat"></i> 실시간 동기화
     </button>
@@ -35,7 +21,7 @@
 <!-- 4개 핵심 지표 카드 -->
 <div class="row g-2 mb-3">
     <div class="col-6">
-        <div class="p-3 bg-white rounded-4 shadow-2xs border">
+        <div class="p-3 bg-white rounded-4 shadow-2xs border" role="link" tabindex="0" style="cursor:pointer;" onclick="window.location.href='/views/meetings'" onkeydown="if(event.key==='Enter') window.location.href='/views/meetings'">
             <div class="d-flex justify-content-between align-items-center">
                 <span class="text-secondary small fw-medium">전체 회의</span>
                 <span class="badge bg-primary-subtle text-primary rounded-circle p-1.5"><i class="bi bi-people-fill"></i></span>
@@ -48,7 +34,7 @@
         </div>
     </div>
     <div class="col-6">
-        <div class="p-3 bg-white rounded-4 shadow-2xs border">
+        <div class="p-3 bg-white rounded-4 shadow-2xs border" role="link" tabindex="0" style="cursor:pointer;" onclick="window.location.href='/tasks/calendar-view'" onkeydown="if(event.key==='Enter') window.location.href='/tasks/calendar-view'">
             <div class="d-flex justify-content-between align-items-center">
                 <span class="text-secondary small fw-medium">진행중 업무</span>
                 <span class="badge bg-primary-subtle text-primary rounded-circle p-1.5"><i class="bi bi-clipboard-check-fill"></i></span>
@@ -61,7 +47,7 @@
         </div>
     </div>
     <div class="col-6">
-        <div class="p-3 bg-white rounded-4 shadow-2xs border">
+        <div class="p-3 bg-white rounded-4 shadow-2xs border" role="link" tabindex="0" style="cursor:pointer;" onclick="window.location.href='/tasks/calendar-view'" onkeydown="if(event.key==='Enter') window.location.href='/tasks/calendar-view'">
             <div class="d-flex justify-content-between align-items-center">
                 <span class="text-secondary small fw-medium">완료 업무</span>
                 <span class="badge bg-primary-subtle text-primary rounded-circle p-1.5"><i class="bi bi-check-circle-fill"></i></span>

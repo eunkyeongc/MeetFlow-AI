@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.orm import Query as SAQuery
 
 from database import get_db
-from models import ActionItem, Meeting, Project, User
+from models import ActionItem, Meeting, Project, ProjectMember, User
 from routers.auth import get_current_user, require_login_page
 from schemas.task import (ActionItemResponse,
                           ActionItemStatusUpdate, ActionItemUpdate)
@@ -33,6 +33,48 @@ def _owned_meetings(db: Session, user: User) -> SAQuery:
     )
 
 
+def _readable_meetings(db: Session, user: User) -> SAQuery:
+
+    """본인이 소유하거나 공유받은 프로젝트의 회의 조회"""
+
+    from sqlalchemy import or_
+
+
+
+    shared_ids = (
+
+        db.query(ProjectMember.project_id)
+
+        .filter(ProjectMember.user_id == user.id)
+
+    )
+
+
+
+    return (
+
+        db.query(Meeting)
+
+        .join(Project, Meeting.project_id == Project.id)
+
+        .filter(
+
+            or_(
+
+                Project.owner_id == user.id,
+
+                Project.id.in_(shared_ids)
+
+            )
+
+        )
+
+    )
+
+
+
+
+
 def _owned_tasks(db: Session, user: User) -> SAQuery:
     """내 프로젝트 → 내 회의에 속한 업무만 (Meeting 이 조인되어 있음)"""
     return (
@@ -41,6 +83,54 @@ def _owned_tasks(db: Session, user: User) -> SAQuery:
         .join(Project, Meeting.project_id == Project.id)
         .filter(Project.owner_id == user.id)
     )
+
+
+
+
+def _readable_tasks(db: Session, user: User) -> SAQuery:
+
+    """소유하거나 공유받은 프로젝트의 업무 조회"""
+
+    from models import ProjectMember
+
+    from sqlalchemy import or_
+
+
+
+    shared_ids = (
+
+        db.query(ProjectMember.project_id)
+
+        .filter(ProjectMember.user_id == user.id)
+
+    )
+
+
+
+    return (
+
+        db.query(ActionItem)
+
+        .join(Meeting, ActionItem.meeting_id == Meeting.id)
+
+        .join(Project, Meeting.project_id == Project.id)
+
+        .filter(
+
+            or_(
+
+                Project.owner_id == user.id,
+
+                Project.id.in_(shared_ids)
+
+            )
+
+        )
+
+    )
+
+
+
 
 
 def _get_item_or_404(db: Session, task_id: int, user: User) -> ActionItem:
@@ -52,7 +142,7 @@ def _get_item_or_404(db: Session, task_id: int, user: User) -> ActionItem:
 
 
 def _filtered_query(db: Session, user: User, project_id, meeting_id, assignee_name, status_filter, overdue):
-    q = _owned_tasks(db, user)
+    q = _readable_tasks(db, user)
     if project_id:
         q = q.filter(Meeting.project_id == project_id)
     if meeting_id:
@@ -129,7 +219,7 @@ def get_dashboard_data(
     current_user: User = Depends(get_current_user),
 ):
     # 1. 총 회의 수 (내 회의만)
-    meetings_query = _owned_meetings(db, current_user)
+    meetings_query = _readable_meetings(db, current_user)
     if project_id:
         meetings_query = meetings_query.filter(Meeting.project_id == project_id)
     total_meetings = meetings_query.count()
@@ -222,7 +312,7 @@ def get_calendar_tasks(
     try:
         # 내 업무 + 회의 제목 (Meeting 은 _owned_tasks 에서 이미 조인됨)
         tasks = (
-            _owned_tasks(db, current_user)
+            _readable_tasks(db, current_user)
             .add_columns(Meeting.title.label("meeting_title"))
             .filter(ActionItem.due_date.isnot(None))
             .all()
@@ -256,27 +346,52 @@ def calendar_view_page(
     current_user: User = Depends(require_login_page),
 ):
     # 1. 내 회의 중 가장 최근 등록된 회의
-    latest_meeting = _owned_meetings(db, current_user).order_by(Meeting.id.desc()).first()
+    latest_meeting = (
+
+        db.query(Meeting)
+
+        .join(Project, Meeting.project_id == Project.id)
+
+        .filter(
+
+            (Project.owner_id == current_user.id)
+
+            | Project.id.in_(
+
+                db.query(ProjectMember.project_id)
+
+                .filter(ProjectMember.user_id == current_user.id)
+
+            )
+
+        )
+
+        .order_by(Meeting.id.desc())
+
+        .first()
+
+    )
 
     # 2. 해당 회의의 액션 아이템 수 계산
     task_count = 0
     if latest_meeting:
         task_count = (
-            _owned_tasks(db, current_user)
+            _readable_tasks(db, current_user)
             .filter(ActionItem.meeting_id == latest_meeting.id)
             .count()
         )
 
     # 3. 내 업무 목록 조회
-    tasks = _owned_tasks(db, current_user).all()
+    tasks = _readable_tasks(db, current_user).all()
 
     # 4. 템플릿으로 전달
-    return templates.TemplateResponse("calendar.html", {
+    return templates.TemplateResponse(request, "calendar.html", {
         "request": request,
         "user": current_user,
         "latest_meeting": latest_meeting,
         "task_count": task_count,
-        "tasks": tasks
+        "tasks": tasks,
+        "active_tab": "calendar"
     })
 
 
@@ -285,13 +400,35 @@ def get_latest_meeting_info(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    latest_meeting = _owned_meetings(db, current_user).order_by(Meeting.id.desc()).first()
+    latest_meeting = (
+
+        db.query(Meeting)
+
+        .join(Project, Meeting.project_id == Project.id)
+
+        .filter(
+
+            (Project.owner_id == current_user.id)
+
+            |
+
+            Project.id.in_(
+
+                db.query(ProjectMember.project_id)
+
+                .filter(ProjectMember.user_id == current_user.id)
+
+            )
+
+        )
+
+    ).order_by(Meeting.id.desc()).first()
 
     if not latest_meeting:
         return {"title": None, "task_count": 0}
 
     task_count = (
-        _owned_tasks(db, current_user)
+        _readable_tasks(db, current_user)
         .filter(ActionItem.meeting_id == latest_meeting.id)
         .count()
     )
@@ -311,7 +448,25 @@ def get_task(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return _get_item_or_404(db, task_id, current_user)
+    item = (
+
+        _readable_tasks(db, current_user)
+
+        .filter(ActionItem.id == task_id)
+
+        .first()
+
+    )
+
+
+
+    if not item:
+
+        raise HTTPException(404, "업무를 찾을 수 없습니다.")
+
+
+
+    return item
 
 
 @router.put("/{task_id}", response_model=ActionItemResponse)

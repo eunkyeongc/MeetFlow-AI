@@ -1,6 +1,6 @@
 from datetime import datetime, date
 
-from sqlalchemy import String, Text, DateTime, Date, ForeignKey
+from sqlalchemy import String, Text, DateTime, Date, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
@@ -54,6 +54,87 @@ class Project(Base):
 
     # Project → User 관계
     owner: Mapped["User"] = relationship()
+
+
+
+class ProjectMember(Base):
+    __tablename__ = "project_members"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "project_id",
+            "user_id",
+            name="uq_project_member"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+
+    project_id: Mapped[int] = mapped_column(
+        ForeignKey("projects.id"),
+        nullable=False
+    )
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id"),
+        nullable=False
+    )
+
+    role: Mapped[str] = mapped_column(
+        String(20),
+        default="viewer",
+        nullable=False
+    )
+
+
+
+
+
+class MeetingParticipant(Base):
+
+    __tablename__ = "meeting_participants"
+
+
+
+    __table_args__ = (
+
+        UniqueConstraint(
+
+            "meeting_id",
+
+            "user_id",
+
+            name="uq_meeting_participant"
+
+        ),
+
+    )
+
+
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+
+
+
+    meeting_id: Mapped[int] = mapped_column(
+
+        ForeignKey("meetings.id", ondelete="CASCADE"),
+
+        nullable=False
+
+    )
+
+
+
+    user_id: Mapped[int] = mapped_column(
+
+        ForeignKey("users.id"),
+
+        nullable=False
+
+    )
+
+
 
 
 class Meeting(Base):

@@ -22,6 +22,16 @@ def login_view(request: Request):
     )
 
 
+# 회원가입 페이지
+@router.get("/register")
+def register_view(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="register.html",
+        context={"active_tab": "login"}
+    )
+
+
 # 계정 관리 페이지
 @router.get("/account")
 def account_view(
@@ -46,7 +56,36 @@ def dashboard_view(
 ):
     # 회의 목록 조회
     try:
-        meetings = db.query(models.Meeting).order_by(models.Meeting.id.desc()).all()
+        meetings = (
+            db.query(models.Meeting)
+            .join(models.Project)
+            .filter(
+
+                (models.Project.owner_id == current_user.id)
+
+                |
+
+                models.Project.id.in_(
+
+                    db.query(models.ProjectMember.project_id)
+
+                    .filter(
+
+                        models.ProjectMember.user_id == current_user.id
+
+                    )
+
+                )
+                |
+                models.Meeting.id.in_(
+                    db.query(models.MeetingParticipant.meeting_id)
+                    .filter(models.MeetingParticipant.user_id == current_user.id)
+                )
+
+            )
+            .order_by(models.Meeting.id.desc())
+            .all()
+        )
     except Exception:
         meetings = []
 
@@ -54,7 +93,13 @@ def dashboard_view(
     today = date.today()
     urgent_action_items = []
     try:
-        all_tasks = db.query(models.ActionItem).all()
+        all_tasks = (
+            db.query(models.ActionItem)
+            .join(models.Meeting)
+            .join(models.Project)
+            .filter(models.Project.owner_id == current_user.id)
+            .all()
+        )
         for t in all_tasks:
             title = str(getattr(t, 'task', '') or getattr(t, 'content', '') or getattr(t, 'title', '') or '')
             raw_status = str(t.status.value if hasattr(t.status, 'value') else t.status or '').lower()
@@ -93,7 +138,32 @@ def meetings_view(
     user: models.User = Depends(require_login_page)
 ):
     try:
-        meetings = db.query(models.Meeting).order_by(models.Meeting.id.desc()).all()
+        meetings = (
+            db.query(models.Meeting)
+            .join(models.Project)
+            .filter(
+
+                (models.Project.owner_id == user.id)
+
+                |
+
+                models.Project.id.in_(
+
+                    db.query(models.ProjectMember.project_id)
+
+                    .filter(models.ProjectMember.user_id == user.id)
+
+                )
+                |
+                models.Meeting.id.in_(
+                    db.query(models.MeetingParticipant.meeting_id)
+                    .filter(models.MeetingParticipant.user_id == user.id)
+                )
+
+            )
+            .order_by(models.Meeting.id.desc())
+            .all()
+        )
     except Exception:
         meetings = []
 
@@ -138,7 +208,27 @@ def meeting_detail_view(
     db: Session = Depends(get_db),
     user: models.User = Depends(require_login_page)
 ):
-    meeting = db.query(models.Meeting).filter(models.Meeting.id == meeting_id).first()
+    meeting = (
+        db.query(models.Meeting)
+        .join(models.Project)
+        .filter(
+            models.Meeting.id == meeting_id,
+            (
+                (models.Project.owner_id == user.id)
+                |
+                models.Project.id.in_(
+                    db.query(models.ProjectMember.project_id)
+                    .filter(models.ProjectMember.user_id == user.id)
+                )
+                |
+                models.Meeting.id.in_(
+                    db.query(models.MeetingParticipant.meeting_id)
+                    .filter(models.MeetingParticipant.user_id == user.id)
+                )
+            )
+        )
+        .first()
+    )
     if not meeting:
         raise HTTPException(status_code=404, detail="회의를 찾을 수 없습니다.")
 

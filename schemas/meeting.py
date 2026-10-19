@@ -11,6 +11,8 @@ class MeetingCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
     meeting_date: date
     attendees: Optional[str] = Field(None, max_length=255)  # "홍길동, 김철수" 처럼 쉼표로 구분
+    transcript: Optional[str] = None
+    attendee_ids: List[int] = Field(default_factory=list)
 
 
 class MeetingUpdate(BaseModel):

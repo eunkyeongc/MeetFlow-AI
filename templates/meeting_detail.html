@@ -5,17 +5,13 @@
     <a href="/views/meetings" class="text-decoration-none text-muted small">
         <i class="bi bi-chevron-left"></i> 회의 상세
     </a>
-    <div>
-    <i class="bi bi-share me-2 text-muted" role="button" onclick="shareMeeting()"></i>
-    <!-- 📤 내보내기 모달 연동 -->
-    <i class="bi bi-upload text-muted" role="button" data-bs-toggle="modal" data-bs-target="#exportModal" title="회의록 내보내기/저장"></i>
-    </div>
+
 </div>
 
 <!-- 상단 회의 기본 정보 Card -->
 <div class="card border-0 shadow-sm rounded-4 p-3 mb-3 bg-white">
     <span class="badge bg-primary-subtle text-primary rounded-pill w-auto mb-2 align-self-start px-3 py-1 fs-7">
-        ✨ AI 분석 완료 (Gemini 2.5 + Whisper)
+        ✨ AI 회의 분석 (OpenAI GPT-4.1 mini)
     </span>
     <h5 class="fw-bold mb-1 text-dark">{{ meeting.title }}</h5>
     <p class="text-muted small mb-1">📅 {{ meeting.meeting_date }}</p>
@@ -170,24 +166,12 @@
         <div class="tab-pane fade" id="tab-stt" role="tabpanel">
             <h6 class="fw-bold text-dark mb-2">전체 텍스트 변환 (STT)</h6>
             <div class="p-3 bg-light rounded-3 text-secondary lh-base fs-7" style="max-height: 300px; overflow-y: auto;">
-                {{ meeting.stt_script or '음성 텍스트 변환 결과가 없습니다.' }}
+                {{ meeting.transcript or '음성 텍스트 변환 결과가 없습니다.' }}
             </div>
         </div>
     </div>
 
-    <!-- 하단 액션 버튼 (클릭 이벤트 연결) -->
-    <div class="row g-2 mt-3">
-        <div class="col-6">
-            <button class="btn btn-outline-primary w-100 rounded-3 py-2 fs-7" onclick="registerCalendar()">
-                <i class="bi bi-calendar-plus me-1"></i> 캘린더에 업무 등록
-            </button>
-        </div>
-        <div class="col-6">
-            <button class="btn btn-primary w-100 rounded-3 py-2 fs-7" onclick="askAI()">
-                <i class="bi bi-robot me-1"></i> AI에게 질문하기
-            </button>
-        </div>
-    </div>
+
 </div>
 
 <!-- 📤 회의록 내보내기 & 저장 모달 창 -->
@@ -277,7 +261,7 @@
     function downloadTxtFile() {
         const title = "{{ meeting.title }}";
         const summary = "{{ meeting.summary if meeting.summary and meeting.summary != 'None' else '요약 내용 없음' }}";
-        const script = "{{ meeting.stt_script if meeting.stt_script else '변환된 텍스트 없음' }}";
+        const script = {{ (meeting.transcript or '변환된 텍스트 없음') | tojson }};
 
         const content = `[ MeetFlow AI 회의록 ]\n\n■ 회의명: ${title}\n\n■ AI 핵심 요약:\n${summary}\n\n■ 전체 회의록 (STT):\n${script}`;
         
@@ -298,7 +282,7 @@
     function copyMeetingContent() {
         const title = "{{ meeting.title }}";
         const summary = "{{ meeting.summary if meeting.summary and meeting.summary != 'None' else '요약 내용 없음' }}";
-        const script = "{{ meeting.stt_script if meeting.stt_script else '변환된 텍스트 없음' }}";
+        const script = {{ (meeting.transcript or '변환된 텍스트 없음') | tojson }};
 
         const content = `[ MeetFlow AI 회의록 ]\n■ 회의명: ${title}\n\n■ AI 핵심 요약:\n${summary}\n\n■ 전체 회의록 (STT):\n${script}`;
 

@@ -5,6 +5,7 @@ import models
 from database import get_db
 from schemas.user import UserCreate, UserResponse
 from services.password_service import hash_password
+from routers.auth import get_current_user
 
 
 router = APIRouter(
@@ -51,3 +52,36 @@ def create_user(
     db.refresh(db_user)
 
     return db_user
+
+
+
+@router.get("/")
+
+def list_users(
+
+    db: Session = Depends(get_db),
+
+    current_user: models.User = Depends(get_current_user),
+
+):
+
+    """로그인한 사용자에게 참석자 선택용 회원 목록 제공"""
+
+    users = db.query(models.User).order_by(
+
+        models.User.name,
+
+        models.User.id
+
+    ).all()
+
+
+
+    return [
+
+        {"id": user.id, "name": user.name, "email": user.email}
+
+        for user in users
+
+    ]
+

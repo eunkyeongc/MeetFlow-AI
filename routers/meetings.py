@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Query, Session
 
 from database import get_db
-from models import ActionItem, Decision, Meeting, Project, User
+from models import ActionItem, Decision, Meeting, MeetingParticipant, Project, User
 from routers.auth import get_current_user
 from schemas.meeting import AnalyzeResponse, MeetingCreate, MeetingResponse, MeetingUpdate
 from services import ai_service, calendar_service, stt_service
@@ -23,6 +23,30 @@ def _owned_meetings(db: Session, user: User) -> Query:
         db.query(Meeting)
         .join(Project, Meeting.project_id == Project.id)
         .filter(Project.owner_id == user.id)
+    )
+
+
+
+def _readable_meetings(db: Session, user: User) -> Query:
+    """소유하거나 공유받은 프로젝트의 회의 조회"""
+    from sqlalchemy import or_
+    from models import ProjectMember
+
+    shared_ids = (
+        db.query(ProjectMember.project_id)
+        .filter(ProjectMember.user_id == user.id)
+    )
+
+    return (
+        db.query(Meeting)
+        .join(Project, Meeting.project_id == Project.id)
+        .filter(
+            or_(
+                Project.owner_id == user.id,
+                Project.id.in_(shared_ids),
+                Meeting.id.in_(db.query(MeetingParticipant.meeting_id).filter(MeetingParticipant.user_id == user.id))
+            )
+        )
     )
 
 
@@ -47,8 +71,15 @@ def create_meeting(
     )
     if not project:
         raise HTTPException(404, "프로젝트를 찾을 수 없습니다.")
-    meeting = Meeting(**data.model_dump())
+    meeting = Meeting(**data.model_dump(exclude={"attendee_ids"}))
     db.add(meeting)
+    db.flush()
+    attendee_ids = list(dict.fromkeys(data.attendee_ids))
+    for user_id in attendee_ids:
+        if not db.query(User).filter(User.id == user_id).first():
+            db.rollback()
+            raise HTTPException(422, "Invalid attendee user ID")
+        db.add(MeetingParticipant(meeting_id=meeting.id, user_id=user_id))
     db.commit()
     db.refresh(meeting)
     return meeting
@@ -62,7 +93,7 @@ def list_meetings(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    q = _owned_meetings(db, current_user)
+    q = _readable_meetings(db, current_user)
     if project_id:
         q = q.filter(Meeting.project_id == project_id)
     return q.order_by(Meeting.meeting_date.desc(), Meeting.id.desc()).offset(skip).limit(min(limit, 100)).all()
@@ -74,7 +105,16 @@ def get_meeting(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return _get_meeting_or_404(db, meeting_id, current_user)
+    meeting = (
+        _readable_meetings(db, current_user)
+        .filter(Meeting.id == meeting_id)
+        .first()
+    )
+
+    if not meeting:
+        raise HTTPException(404, "회의를 찾을 수 없습니다.")
+
+    return meeting
 
 
 @router.put("/{meeting_id}", response_model=MeetingResponse)

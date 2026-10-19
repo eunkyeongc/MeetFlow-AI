@@ -5,26 +5,27 @@ from datetime import date
 
 from dotenv import load_dotenv
 from fastapi import HTTPException
-from google import genai
-from google.genai import types
+from openai import OpenAI
 
 from schemas.meeting import MeetingAnalysis
 
 load_dotenv()
 
-AI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+AI_MODEL = os.getenv("OPENAI_AI_MODEL", "gpt-4.1-mini")
 MAX_TRANSCRIPT_CHARS = 200_000
 
 _client = None
 
 
-def _get_client() -> genai.Client:
+def _get_client() -> OpenAI:
     global _client
     if _client is None:
-        api_key = os.getenv("GEMINI_API_KEY")
+        api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
-            raise HTTPException(500, "GEMINI_API_KEY가 설정되지 않았습니다.")
-        _client = genai.Client(api_key=api_key)
+            raise HTTPException(
+                500, "OPENAI_API_KEY가 설정되지 않았습니다."
+            )
+        _client = OpenAI(api_key=api_key)
     return _client
 
 
@@ -64,15 +65,22 @@ def analyze_meeting(transcript: str, title: str = "", attendees: list[str] | Non
 
     client = _get_client()
     try:
-        response = client.models.generate_content(
+        response = client.chat.completions.create(
             model=AI_MODEL,
-            contents=_build_prompt(transcript, title, attendees or []),
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                temperature=0.2,
-            ),
+            messages=[
+                {
+                    "role": "system",
+                    "content": "회의록을 정확히 분석하고 JSON으로만 답하세요."
+                },
+                {
+                    "role": "user",
+                    "content": _build_prompt(transcript, title, attendees or [])
+                }
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.2,
         )
-        raw = (response.text or "").strip()
+        raw = (response.choices[0].message.content or "").strip()
         raw = raw.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
         data = json.loads(raw)
         for key in ("key_points", "decisions", "action_items"):

@@ -33,3 +33,4 @@ google-genai
 # Testing
 pytest
 httpx
+openai>=2.0,<3.0
